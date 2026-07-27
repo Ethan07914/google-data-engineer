@@ -1,4 +1,4 @@
-                                                                                                                                                                           # Mini Lakehouse Project
+# Mini Lakehouse Project
 
 **Course:** Build Data Lakes and Data Warehouses on Google Cloud (Modules 1–4)
 
@@ -110,20 +110,26 @@ FROM lakehouse.web_log_raw
 WHERE customer_id IS NOT NULL;
 ```
 
+```bash
+cd /Users/<LOCATION>/google-data-engineer/Projects/mini-lakehouse                                                                                                                                              
+  bq query --use_legacy_sql=false < load_raw_csv_to_staging.sql
+```
+
+
 ## Step 3 — Gold: aggregated native BigQuery table
 
 Partition and cluster the gold table for efficient querying (Module 3 concepts).
 
 ```sql
 CREATE OR REPLACE TABLE lakehouse.customer_summary_gold
-PARTITION BY DATE(event_ts)
+PARTITION BY event_date
 CLUSTER BY customer_id AS
 SELECT
   customer_id,
   DATE(event_ts) AS event_date,
   COUNT(*) AS total_events,
   SUM(purchase_amount) AS total_spent,
-  SUM(purchase_amount > 0) AS total_purchases
+  COUNTIF(purchase_amount > 0) AS total_purchases
 FROM lakehouse.web_log_silver
 GROUP BY customer_id, event_date;
 ```
