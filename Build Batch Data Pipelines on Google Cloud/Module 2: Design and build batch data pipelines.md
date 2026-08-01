@@ -364,4 +364,129 @@ gcloud dataproc batches submit pyspark top_items_aggregator_job.py \
 - Allows you to create your own charts to correlate different metrics.
 - Create custom dashboards for any of the hundreds of available Spark metrics.
 
+## Lab: Build a Simple Batch Data Pipeline with Serverless for Apache Spark
 
+### Environment configuration
+
+**Enable private IP access**
+
+```bash
+gcloud compute networks subnets update default --region=us-east4 --enable-private-ip-google-access
+```
+
+**Create a new Cloud Storage bucket as a staging location**
+
+```bash
+gsutil mb -p qwiklabs-gcp-03-c64d7229aa8a gs://qwiklabs-gcp-03-c64d7229aa8a
+```
+
+**Create a new storage bucket as a temporary location for BigQuery while it creates and loads a table**
+
+```bash
+gsutil mb -p qwiklabs-gcp-03-c64d7229aa8a gs://qwiklabs-gcp-03-c64d7229aa8a-bqtemp
+```
+
+**Create a BigQuery dataset to store the data**
+
+```bash
+bq mk -d loadavro
+```
+
+### Download lab assets
+
+**Navigate to the VM instance then click the SSH button.**
+
+**In the VM terminal, download the Avro file that will be processed for storage in BigQuery**
+
+```bash
+wget https://storage.googleapis.com/cloud-training/dataengineering/lab_assets/idegc/campaigns.avro
+```
+
+**Move the Avro file into the staging bucket**
+
+```bash
+gcloud storage cp campaigns.avro gs://qwiklabs-gcp-03-c64d7229aa8a
+```
+
+**Download an archive containing the Spark code**
+
+```bash
+wget https://storage.googleapis.com/cloud-training/dataengineering/lab_assets/idegc/dataproc-templates.zip
+```
+
+**Extract the archive**
+
+```bash
+unzip dataproc-templates.zip
+```
+
+**Change directory**
+
+```bash
+cd dataproc-templates/python
+```
+
+### Configure and execute the Spark code
+
+**Set the environment variables for the Serverless for Apache Spark environment**
+
+```bash
+export GCP_PROJECT=qwiklabs-gcp-03-c64d7229aa8a
+export REGION=us-east4
+export GCS_STAGING_LOCATION=gs://qwiklabs-gcp-03-c64d7229aa8a
+export JARS=gs://cloud-training/dataengineering/lab_assets/idegc/spark-bigquery_2.12-20221021-2134.jar
+```
+
+**Run the code to execute the Spark Cloud Storage to BigQuery template to load the Avro file into BigQuery**
+
+```bash
+./bin/start.sh \
+    -- --template=GCSTOBIGQUERY \
+    --gcs.bigquery.input.format="avro" \
+    --gcs.bigquery.input.location="gs://qwiklabs-gcp-03-c64d7229aa8a" \
+    --gcs.bigquery.input.inferschema="true" \
+    --gcs.bigquery.output.dataset="loadavro" \
+    --gcs.bigquery.output.table="campaigns" \
+    --gcs.bigquery.output.mode=overwrite \
+    --gcs.bigquery.temp.bucket.name="qwiklabs-gcp-03-c64d7229aa8a-bqtemp"
+```
+
+**View the data in the new table**
+
+```bash
+bq query \
+ --use_legacy_sql=false \
+ 'SELECT * FROM `loadavro.campaigns`;'
+```
+
+## Lab: Build a Simple Batch Pipeline with Dataflow Job Builder UI
+
+**View first 5 records and header of the data**
+
+```bash
+gcloud storage cat gs://qwiklabs-gcp-01-ff6770fbb994-input-bucket/source/loan_applications.csv | head -n 6
+```
+
+**Enable Dataflow and BigQuery APIs**
+
+```bash
+gcloud services enable dataflow.googleapis.com bigquery.googleapis.com
+```
+
+**Instantiate and authorize the Dataflow Service Agent permissions**
+
+```bash
+# Generate Dataflow service identity account
+gcloud beta services identity create --service=dataflow.googleapis.com --project=qwiklabs-gcp-01-ff6770fbb994
+
+# Wait for the account to propagate across IAM directory servers
+sleep 15
+
+# Retrieve project identity details
+PROJECT_NUMBER=$(gcloud projects describe qwiklabs-gcp-01-ff6770fbb994 --format="value(projectNumber)")
+
+# Assign necessary security roles
+gcloud projects add-iam-policy-binding qwiklabs-gcp-01-ff6770fbb994 \
+  --member="serviceAccount:service-${PROJECT_NUMBER}@dataflow-service-producer-prod.iam.gserviceaccount.com" \
+  --role="roles/iam.serviceAccountUser"
+```
