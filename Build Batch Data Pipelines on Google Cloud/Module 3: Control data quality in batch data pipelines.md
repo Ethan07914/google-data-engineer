@@ -98,3 +98,162 @@ filter()
 - Schema-on-write is the data warehouse approach and requires more thought around schema drift; schema-on-read is the lake approach.
 - With schema-on-read there is minimal upfront transformation, just load the raw data; this maximises flexibility with the drawback of slower query performance, since data must be validated on every read.
 
+## Data integrity and duplication
+
+- **Exact duplicates**: Caused by technical glitches that cause the same data to be sent more than once; inflates metrics like count and average.
+- **Key-based duplicates**: Caused by business logic or architectural issues (multiple source systems updating the same entity, creating multiple states); corrupts analytics, making it impossible to get an accurate view of an entity's current state.
+- **Semantic duplicates**: Caused by data modelling identity resolution failures from manual data entry, system migrations or merging datasets. Breaks the single customer view, leading to inaccurate customer lifetime value (LTV) calculations.
+
+### Handling duplicates in Dataflow
+
+```python
+# Key based deduplication
+beam.Distinct()
+```
+
+- GroupByKey works by shuffling all values for a given key to a single worker (becomes a problem if a key has billions of records).
+- GroupByKey is preferred when you truly need all elements for a key, like joining two datasets.
+- CombinePerKey is preferred for associative and commutative aggregations like finding the max value.
+- Instead, use two-stage aggregation (beam.CombinePerKey with a custom beam.CombineFn), which distributes the heaviest load across the entire cluster.
+
+#### Two stage aggregation
+
+- Local combine (pre-shuffle): on each worker, the CombineFn reduces all records for a key down to a single best record for that worker.
+- Global combine (post-shuffle): the shuffle now moves only these few pre-combined records; the final worker simply merges the candidates to find the globally best record.
+
+**Deduplication**
+
+```python
+# The CombineFn is the robust, production-grade pattern for stateful reduction.
+import apache_beam as beam
+
+class GetLatestRecordFn(beam.CombineFn):
+    """A CombineFn to find the record with the latest timestamp. This is inherently skew-resistant."""
+
+    def create_accumulator(self):
+        # The initial state is a placeholder for (record, timestamp)
+        return (None, float('-inf'))
+
+    def add_input(self, accumulator, new_record):
+        # Compare the new record's timestamp with the latest one seen so far.
+        current_record, max_timestamp = accumulator
+        new_timestamp = new_record['event_timestamp']
+        if new_timestamp > max_timestamp:
+            return (new_record, new_timestamp)
+        return accumulator
+
+    def merge_accumulators(self, accumulators):
+        # Merge the pre-combined results from different workers.
+        return max(accumulators, key=lambda acc: acc[1])
+
+    def extract_output(self, final_accumulator):
+        # The final output is just the record itself.
+        return final_accumulator[0]
+
+# --- In the pipeline ---
+latest_records = (p
+                 | 'ReadData' >> beam.io.Read(...)
+                 | 'KeyByTransactionId' >> beam.WithKeys(lambda r: r['transaction_id'])
+                 # CombinePerKey is the scalable alternative to GroupByKey for this use case.
+                 | 'SelectLatestRecord' >> beam.CombinePerKey(GetLatestRecordFn())
+                 # The output of CombinePerKey is (key, value), so we extract the value.
+                 | 'ExtractValue' >> beam.Values()
+                )
+```
+
+### Window function
+
+- Use for deduplication in Spark.
+- **Provides**:
+  - Absolute determinism: guarantees the exact same record is chosen every time for a job.
+  - Clarity and readability: another developer can immediately understand the logic.
+  - Scalable performance: requires a data shuffle, however modern Spark engines are highly optimized for this.
+  - Adaptive Query Execution: automatically detects data skew by breaking large partitions into smaller chunks.
+
+```python
+# The window function is the production-standard for deterministic deduplication in Spark.
+from pyspark.sql import Window
+from pyspark.sql.functions import row_number
+
+# 1. Define the window specification.
+# Partition by the unique key and order by timestamp to find the latest record.
+window_spec = Window.partitionBy("transaction_id").orderBy(df.event_timestamp.desc())
+
+# 2. Add the rank column, then filter to keep only the latest record (rank=1).
+# The original schema is preserved without a complex aggregation.
+clean_df = (df.withColumn("rank", row_number().over(window_spec))
+              .filter("rank = 1")
+              .drop("rank")) # Drop the temporary rank column
+```
+
+### Semantic Deduplication
+
+- Use a BigQuery ML model to identify similar customer records (ML.GENERATE_TEXT_EMBEDDING and ML.DISTANCE to find pairs that are semantically similar).
+- **Govern with Dataplex**: Manage the BigQuery ML job as a Dataplex Data Quality Task. Allows you to schedule scans, track data quality scores over time and provide a governance layer for auditors.
+- Automate notifications with Cloud Monitoring: a log-based alert watches for the successful-completion log of a Dataplex task; when the alert fires, it signifies that a new list of candidate duplicates is ready for review.
+- Trigger the handoff with Pub/Sub and Cloud Functions: make the monitoring alert publish a notification to a Pub/Sub topic. A lightweight Cloud Function or Cloud Run service subscribes to this topic, and when a message is received, the function is triggered to execute the handoff logic.
+- This handoff logic could be reading the candidate duplicate pairs from the BigQuery results table, calling an API to create a review ticket task (in Jira or Salesforce).
+
+## Deduplication with Serverless for Apache Spark
+
+- Window function isolates duplicate records without requiring expensive joins or shuffles.
+
+```python
+# Create a separate box for each unique combination
+Window.partitionBy()
+
+# Iterates over each box (or window) and assigns a sequential number to every row
+row_number().over(window_spec)
+
+# Keep only the row with rank of 1
+.filter(col("rownum") == 1)
+```
+
+## Deduplication with Dataflow
+
+- Use a deduplicate transform to remove duplicates before data ever reaches its destination.
+- Discards any element it has already seen before.
+- First derive a unique key (primary or composite primary key).
+- Then apply the transform Deduplicate.by(key_function).
+- Windowing does not require you to specify a time duration for batch pipelines; the transform just operates over the entire input PCollection.
+
+```python
+import apache_beam as beam
+from apache_beam.transforms.deduplicate import Deduplicate
+
+# Example PCollection with duplicate records
+with beam.Pipeline() as p:
+    raw_data = p | 'Create' >> beam.Create([
+        {'id': 1, 'value': 'A'},
+        {'id': 2, 'value': 'B'},
+        {'id': 1, 'value': 'A'}, # Duplicate record
+        {'id': 3, 'value': 'C'},
+        {'id': 2, 'value': 'B'}  # Another duplicate
+    ])
+    
+    # Deduplicate based on the 'id' field
+    deduplicated_data = raw_data | 'Deduplicate' >> Deduplicate.by(lambda row: row['id'])
+
+    # Log the results
+    deduplicated_data | 'Log' >> beam.Map(print)
+
+```
+
+### Post processing deduplication
+
+- Offloads computationally expensive deduplication to BigQuery, which is better optimized for this workload.
+- Load data into a BigQuery staging table.
+- Periodically run a scheduled query (Dataform or Cloud Composer) on the staging table.
+- Deduplicate with SQL, copy only unique records from your staging table into the production table using a MERGE statement.
+
+```sql
+MERGE INTO `<project>.<dataset>.final_table` T
+USING (
+  SELECT *,
+         ROW_NUMBER() OVER (PARTITION BY id ORDER BY timestamp DESC) AS rn
+  FROM `<project>.<dataset>.staging_table`
+) S
+ON T.id = S.id
+WHEN NOT MATCHED BY TARGET AND S.rn = 1 THEN
+  INSERT (id, value, timestamp) VALUES(S.id, S.value, S.timestamp)
+```
