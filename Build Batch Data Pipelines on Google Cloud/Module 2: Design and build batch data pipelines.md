@@ -1,5 +1,45 @@
 # Module 2: Design and build batch data pipelines
 
+## Table of contents
+
+- [Large scale data transformations](#large-scale-data-transformations)
+  - [Google Cloud data processing engines](#google-cloud-data-processing-engines)
+  - [Principles](#principles)
+- [Dataflow](#dataflow)
+  - [Apache Beam](#apache-beam)
+  - [Dataflow design principles](#dataflow-design-principles)
+- [Transforms with Serverless for Apache Spark](#transforms-with-serverless-for-apache-spark)
+- [Apache Spark concepts](#apache-spark-concepts)
+  - [Reusability](#reusability)
+- [Data connections and orchestration](#data-connections-and-orchestration)
+  - [Cloud SQL when](#cloud-sql-when)
+  - [BigQuery when](#bigquery-when)
+  - [Cloud Storage when](#cloud-storage-when)
+  - [Best practices](#best-practices)
+- [Cloud Composer](#cloud-composer)
+  - [Step 1: verify workflow with a manual run](#step-1-verify-workflow-with-a-manual-run)
+  - [Step 2: Automate with Cloud Composer](#step-2-automate-with-cloud-composer)
+  - [DAG](#dag)
+- [Execute an Apache Spark pipeline](#execute-an-apache-spark-pipeline)
+  - [Scenario](#scenario)
+  - [Setup steps](#setup-steps)
+  - [PySpark script](#pyspark-script)
+    - [Step 1: Initial Configuration](#step-1-initial-configuration)
+    - [Step 2: Data Ingestion](#step-2-data-ingestion)
+    - [Step 3: Data Transformation](#step-3-data-transformation)
+    - [Step 4: Land to a Data Sink](#step-4-land-to-a-data-sink)
+  - [gcloud CLI commands](#gcloud-cli-commands)
+- [Optimize batch pipeline performance](#optimize-batch-pipeline-performance)
+  - [Resolving bottlenecks](#resolving-bottlenecks)
+  - [Dataflow UI for optimization](#dataflow-ui-for-optimization)
+  - [Spark UI and Gemini insights for optimization](#spark-ui-and-gemini-insights-for-optimization)
+  - [Cloud Monitoring](#cloud-monitoring)
+- [Lab: Build a Simple Batch Data Pipeline with Serverless for Apache Spark](#lab-build-a-simple-batch-data-pipeline-with-serverless-for-apache-spark)
+  - [Environment configuration](#environment-configuration)
+  - [Download lab assets](#download-lab-assets)
+  - [Configure and execute the Spark code](#configure-and-execute-the-spark-code)
+- [Lab: Build a Simple Batch Pipeline with Dataflow Job Builder UI](#lab-build-a-simple-batch-pipeline-with-dataflow-job-builder-ui)
+
 ## Large scale data transformations
 
 ### Google Cloud data processing engines

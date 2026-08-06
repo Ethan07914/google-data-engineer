@@ -1,5 +1,17 @@
 # Module 2: Building a data lakehouse with Cloud Storage, open formats, and BigQuery
 
+## Table of contents
+
+- [Cloud Storage](#cloud-storage)
+- [Apache Iceberg](#apache-iceberg)
+  - [Provides](#provides)
+- [BigQuery as a Data Warehouse](#bigquery-as-a-data-warehouse)
+- [BigQuery in Lake-house architecture](#bigquery-in-lake-house-architecture)
+- [AlloyDB](#alloydb)
+- [Federated Queries](#federated-queries)
+- [Lab: Federated query with BigQuery](#lab-federated-query-with-bigquery)
+  - [Federated Query](#federated-query)
+
 ## Cloud Storage
 
 - Used to store vast amounts of data in different formats

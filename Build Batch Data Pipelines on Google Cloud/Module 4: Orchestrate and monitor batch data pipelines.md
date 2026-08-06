@@ -1,5 +1,37 @@
 # Module 4: Orchestrate and monitor batch data pipelines
 
+## Table of contents
+
+- [Principles of orchestration](#principles-of-orchestration)
+- [Cloud Scheduler](#cloud-scheduler)
+- [Workflows](#workflows)
+- [Cloud Composer](#cloud-composer)
+  - [Anti-patterns](#anti-patterns)
+  - [DAG Imports and Configuration](#dag-imports-and-configuration)
+  - [DAG Definition](#dag-definition)
+  - [Ingest and Validate with Dataflow](#ingest-and-validate-with-dataflow)
+  - [Aggregate with Serverless for Apache Spark](#aggregate-with-serverless-for-apache-spark)
+  - [Load Final Report with BigQuery](#load-final-report-with-bigquery)
+  - [Defining Task Dependencies](#defining-task-dependencies)
+  - [Environment setup](#environment-setup)
+  - [Batch interval](#batch-interval)
+  - [DAGs in Cloud Storage](#dags-in-cloud-storage)
+  - [Production-grade systems](#production-grade-systems)
+- [Unified observability](#unified-observability)
+  - [Proactive monitoring](#proactive-monitoring)
+  - [Cloud Monitoring Dashboards](#cloud-monitoring-dashboards)
+    - [Centralized log analysis](#centralized-log-analysis)
+    - [Proactive alerting](#proactive-alerting)
+- [Alerts and troubleshooting](#alerts-and-troubleshooting)
+  - [Alerts on system metrics](#alerts-on-system-metrics)
+  - [Alerting on DAG Run Failures (Critical Alert)](#alerting-on-dag-run-failures-critical-alert)
+  - [Alerting on Performance Degradation](#alerting-on-performance-degradation)
+  - [Alerting on DAG Parsing Errors](#alerting-on-dag-parsing-errors)
+  - [Alerts on log-based metrics](#alerts-on-log-based-metrics)
+    - [Create the log-based metric](#create-the-log-based-metric)
+    - [Create an alerting policy](#create-an-alerting-policy)
+  - [Fixing orchestrated batch pipelines](#fixing-orchestrated-batch-pipelines)
+
 ## Principles of orchestration
 
 - **Dependency Management**: Define the exact order of execution.
@@ -257,3 +289,128 @@ with DAG(
 - Data quality checks: integrate data quality steps into your Spark job or Composer DAG to ensure the raw data is valid and the transformations produce expected results.
 - Monitoring and alerting: configure detailed logging in Cloud Logging, and set up alerts in Cloud Monitoring to notify you if a pipeline fails or if performance degrades.
 
+## Unified observability
+
+- Alternative to a fragmented monitoring strategy.
+- A fragmented monitoring strategy is a liability, as it is slow to view each pipeline's component logs in isolation.
+- Having a single place or view where you can correlate signals from across your entire system is known as unified observability.
+- This is done on Google Cloud through the tight integration of Cloud Monitoring and Cloud Logging.
+
+### Proactive monitoring
+
+- Allows you to detect performance regressions, spot data quality issues, and debug failures quickly.
+- **Workflow Health**: DAG run duration, task success/failure rate, task retry count.
+- **Data Health**: Data freshness/lag, processed record count, DLQ count.
+- **Performance and Cost**: Resource utilization, BigQuery slot usage.
+
+**Python code used in a DAG for structured logging**
+
+```python
+# This function could be part of a Dataflow DoFn or a Spark map function.
+def process_transaction(element):
+    # In a real application, the client is often initialized once per worker.
+    from google.cloud import logging as gcp_logging
+    log_client = gcp_logging.Client()
+    logger = log_client.logger("financial_pipeline_logs")
+
+    # The correlation_id would be passed in as a pipeline argument from
+    # the Cloud Composer DAG, e.g., using context variables like dag_run.run_id
+    correlation_id = "scheduled__2025-08-29T14:00:00+00:00"
+
+    try:
+        # Business logic to validate the transaction
+        amount = element.get("amount")
+
+        # CORRECTED: Check for None first to avoid a TypeError
+        if amount is None or not isinstance(amount, (int, float)) or amount < 0:
+            raise ValueError("Invalid or missing transaction amount.")  # Using ValueError is more specific here
+
+        #... more validation...
+
+    except Exception as e:
+        # Log a structured payload for actionable, queryable insights
+        error_payload = {
+            "message": f"Transaction validation failed: {str(e)}",
+            "severity": "ERROR",
+            "transaction_id": element.get("transaction_id"),
+            "pipeline_stage": "validation",
+            "correlation_id": correlation_id
+        }
+        logger.log_struct(error_payload)
+        # Optionally, you would then yield this element to a Dead Letter Queue.
+        return  # Stop processing this record
+
+    #... continue processing valid record...
+```
+
+### Cloud Monitoring Dashboards
+
+- Rather than looking at metrics individually, assemble them into a dedicated custom dashboard in Cloud Monitoring.
+- Instead of requiring you to stare at these dashboards, you can be alerted when something goes wrong, then explore in the dashboard.
+
+#### Centralized log analysis
+
+- Cloud Logging is a fully managed service that automatically ingests, stores and analyzes log data from every component of your pipelines.
+- Writes structured logs, which you transform into a powerful queryable database.
+- Logs should be written as JSON with nested fields making them more searchable.
+
+#### Proactive alerting
+
+- Create policies that automatically notify you when specific conditions are met.
+
+## Alerts and troubleshooting
+
+- Logs are managed by Cloud Logging; Cloud Monitoring handles the alerting functionality.
+- Create alert policies on time series metrics.
+- **System metric based alerting**: Ideal for monitoring the overall health of your pipeline infrastructure.
+- **Log based alerting**: For more nuanced, business-logic-specific issues, you can create log-based alerts to monitor for data quality problems.
+
+### Alerts on system metrics
+
+- Alert on different kinds of failure modes.
+- Monitor outright failures, performance degradation, and issues that prevent the DAG from starting.
+
+### Alerting on DAG Run Failures (Critical Alert)
+
+- Get notified immediately if a DAG run fails.
+1. In Cloud Logging or Monitoring, in the left side menu navigate to Alerting and click Create Policy.
+2. Select a metric.
+3. Filter the data (dag_id=..., state='failed').
+4. Configure the trigger: set the condition to fire if the metric is above a threshold.
+5. Configure notifications: get notified in Slack or by email.
+
+### Alerting on Performance Degradation
+
+- A DAG completing but taking much longer than usual can be a sign of a serious problem.
+1. Select a metric (DAG run duration, composer.googleapis.com/dag/run/duration).
+2. Filter the data (dag_id='...').
+3. Configure the trigger: set the condition to fire if the metric is above the threshold.
+
+### Alerting on DAG Parsing Errors
+
+- Syntax errors or import issues can prevent Composer from even loading your DAG file.
+- This alert notifies you if it is broken.
+1. Select a metric (composer.googleapis.com/dag_processing/unhealthy_dag_file_count).
+2. Configure the trigger: set the condition to fire if the metric is above the threshold of 0 for 5 minutes.
+
+### Alerts on log-based metrics
+
+#### Create the log-based metric
+
+1. Navigate to log-based metrics in Cloud Logging and click Create Metric.
+2. Metric type: choose counter, since you want to count the number of errors.
+3. Provide details: give the metric a name.
+4. Filter by using a query.
+5. Click Create Metric (Cloud Logging will now count every new log entry that matches this filter and expose it as a new custom metric).
+
+#### Create an alerting policy
+
+1. Navigate to Alerting and click Create Policy.
+2. Select a metric.
+3. Configure the trigger: set the condition to fire if the delta value (rate of change) of the metric is above a threshold for a given time period.
+4. Configure notifications.
+
+### Fixing orchestrated batch pipelines
+
+1. Use the Airflow UI in Cloud Composer to visually inspect the DAG run and look for failed or stuck tasks.
+2. View Airflow logs; override the logging level to DEBUG for more detailed messages, then set it back to INFO when done to manage costs.

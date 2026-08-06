@@ -1,5 +1,28 @@
 # Module 3: Control data quality in batch data pipelines
 
+## Table of contents
+
+- [Data Validation](#data-validation)
+  - [Dead letter queue (DLQ)](#dead-letter-queue-dlq)
+    - [Dataflow DLQ implementation](#dataflow-dlq-implementation)
+    - [Serverless for Apache Spark DLQ implementation](#serverless-for-apache-spark-dlq-implementation)
+- [Log and analyze errors](#log-and-analyze-errors)
+  - [Serverless for Apache Spark templates for error logs](#serverless-for-apache-spark-templates-for-error-logs)
+    - [Steps](#steps)
+    - [Key PySpark functions](#key-pyspark-functions)
+- [Schema evolution for batch pipelines](#schema-evolution-for-batch-pipelines)
+  - [Breaking changes](#breaking-changes)
+  - [Schema-on-write vs schema-on-read](#schema-on-write-vs-schema-on-read)
+- [Data integrity and duplication](#data-integrity-and-duplication)
+  - [Handling duplicates in Dataflow](#handling-duplicates-in-dataflow)
+    - [Two stage aggregation](#two-stage-aggregation)
+  - [Window function](#window-function)
+  - [Semantic Deduplication](#semantic-deduplication)
+- [Deduplication with Serverless for Apache Spark](#deduplication-with-serverless-for-apache-spark)
+- [Deduplication with Dataflow](#deduplication-with-dataflow)
+  - [Post processing deduplication](#post-processing-deduplication)
+- [Lab: Validate Data Quality for a Batch Data Pipeline using Serverless for Apache Spark](#lab-validate-data-quality-for-a-batch-data-pipeline-using-serverless-for-apache-spark)
+
 ## Data Validation
 
 - Check data meets predefined rules and standards (data type checks and format constraints).

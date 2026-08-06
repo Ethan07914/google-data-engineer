@@ -1,5 +1,27 @@
 # Module 4: Advanced lakehouse patterns and data governance
 
+## Table of contents
+
+- [Data Governance](#data-governance)
+- [Metadata](#metadata)
+- [Cloud Storage security](#cloud-storage-security)
+- [BigQuery](#bigquery)
+- [Lake-house](#lake-house)
+- [Fine-grained security](#fine-grained-security)
+- [Sensitive Data Discovery](#sensitive-data-discovery)
+- [ML on a lakehouse](#ml-on-a-lakehouse)
+  - [Feature Engineering](#feature-engineering)
+  - [Create the model](#create-the-model)
+  - [Model evaluation](#model-evaluation)
+  - [Prediction](#prediction)
+- [Agent platform for advanced ML](#agent-platform-for-advanced-ml)
+- [Medallion architecture](#medallion-architecture)
+  - [Bronze](#bronze)
+  - [Silver](#silver)
+  - [Gold](#gold)
+- [Migration Steps](#migration-steps)
+- [Cost management and optimization](#cost-management-and-optimization)
+
 ## Data Governance
 
 - Covers who can access data, how sensitive data is protected, and where its metadata/lineage is tracked.

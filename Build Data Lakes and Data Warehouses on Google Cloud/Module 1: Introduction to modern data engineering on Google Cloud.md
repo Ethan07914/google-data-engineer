@@ -1,5 +1,15 @@
 # Module 1: Introduction to modern data engineering on Google Cloud
 
+## Table of contents
+
+- [Data Lakes](#data-lakes)
+- [Data Warehouses](#data-warehouses)
+- [Data Lake-house](#data-lake-house)
+- [Choosing between warehouse, lake and lake-house](#choosing-between-warehouse-lake-and-lake-house)
+  - [Data Warehouse when](#data-warehouse-when)
+  - [Data Lake when](#data-lake-when)
+  - [Data Lake-house when](#data-lake-house-when)
+
 ## Data Lakes
 
 - Stores large amount of data in raw format

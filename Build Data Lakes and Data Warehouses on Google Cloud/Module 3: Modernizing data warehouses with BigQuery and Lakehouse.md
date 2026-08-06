@@ -1,5 +1,14 @@
 # Module 3: Modernizing data warehouses with BigQuery and Lakehouse
 
+## Table of contents
+
+- [BigQuery](#bigquery)
+  - [Slots and shuffle](#slots-and-shuffle)
+- [Partitioning and clustering](#partitioning-and-clustering)
+- [Lakehouse in BigQuery](#lakehouse-in-bigquery)
+- [Lab: Querying external data and Iceberg tables](#lab-querying-external-data-and-iceberg-tables)
+  - [Task 2. Create and load the Iceberg table in Cloud Storage with BigQuery](#task-2-create-and-load-the-iceberg-table-in-cloud-storage-with-bigquery)
+
 ## BigQuery
 
 - Fully managed, serverless data warehouse.

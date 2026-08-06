@@ -1,5 +1,17 @@
 # Mini Lakehouse Project
 
+## Table of contents
+
+- [Goal](#goal)
+- [Cost & time](#cost-time)
+- [Prerequisites](#prerequisites)
+- [Step 1 — Bronze: generate and upload raw data](#step-1-bronze-generate-and-upload-raw-data)
+- [Step 2 — Silver: Iceberg table over Cloud Storage](#step-2-silver-iceberg-table-over-cloud-storage)
+- [Step 3 — Gold: aggregated native BigQuery table](#step-3-gold-aggregated-native-bigquery-table)
+- [Step 4 — Governance: row-level security](#step-4-governance-row-level-security)
+- [Step 5 (stretch) — BigQuery ML model](#step-5-stretch-bigquery-ml-model)
+- [Cleanup](#cleanup)
+
 **Course:** Build Data Lakes and Data Warehouses on Google Cloud (Modules 1–4)
 
 A small, free-tier project to get hands-on with the concepts from that course: raw storage, Iceberg lakehouse tables, partitioning/clustering, governance, and BigQuery ML.
@@ -114,7 +126,6 @@ WHERE customer_id IS NOT NULL;
 cd /Users/<LOCATION>/google-data-engineer/Projects/mini-lakehouse                                                                                                                                              
   bq query --use_legacy_sql=false < load_raw_csv_to_staging.sql
 ```
-
 
 ## Step 3 — Gold: aggregated native BigQuery table
 

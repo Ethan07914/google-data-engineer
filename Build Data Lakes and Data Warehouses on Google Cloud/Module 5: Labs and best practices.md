@@ -1,5 +1,20 @@
 # Module 5: Labs and best practices
 
+## Table of contents
+
+- [Lab: Getting Started with BigQuery ML](#lab-getting-started-with-bigquery-ml)
+  - [Create model](#create-model)
+  - [Evaluate the model](#evaluate-the-model)
+    - [Result](#result)
+  - [Use the model](#use-the-model)
+    - [By country](#by-country)
+    - [By user](#by-user)
+- [Lab: Vector search with BigQuery](#lab-vector-search-with-bigquery)
+  - [Create an AI model](#create-an-ai-model)
+  - [Create table to store embeddings](#create-table-to-store-embeddings)
+  - [Create vector index](#create-vector-index)
+  - [Perform text similarity test](#perform-text-similarity-test)
+
 ## Lab: Getting Started with BigQuery ML
 
 ### Create model
