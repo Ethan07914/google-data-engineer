@@ -31,6 +31,10 @@
     - [Create the log-based metric](#create-the-log-based-metric)
     - [Create an alerting policy](#create-an-alerting-policy)
   - [Fixing orchestrated batch pipelines](#fixing-orchestrated-batch-pipelines)
+- [Visual pipeline management](#visual-pipeline-management)
+  - [Data Fusion: Google Cloud Console](#data-fusion-google-cloud-console)
+  - [Data Fusion: Data Fusion Studio](#data-fusion-data-fusion-studio)
+- [Lab: Building Batch Pipelines in Cloud Data Fusion](#lab-building-batch-pipelines-in-cloud-data-fusion)
 
 ## Principles of orchestration
 
@@ -414,3 +418,40 @@ def process_transaction(element):
 
 1. Use the Airflow UI in Cloud Composer to visually inspect the DAG run and look for failed or stuck tasks.
 2. View Airflow logs; override the logging level to DEBUG for more detailed messages, then set it back to INFO when done to manage costs.
+
+## Visual pipeline management
+
+- Data Fusion is Google Cloud's fully managed, cloud-native data integration service.
+- Helps you build scalable ETL/ELT data pipelines with minimal coding.
+- Cloud Data Fusion has a drag-and-drop interface and a large library of pre-built connectors.
+- Allows for quick ingestion and transformation of data from hundreds of sources.
+- Visual designs are translated into optimized open-source frameworks like Apache Spark.
+- Use Data Fusion for rapid development and accessibility, where you are building connector-heavy integration workflows.
+- Use Dataflow when you need fine-grained control over your pipeline logic for complex transformations (requires coding knowledge).
+
+### Data Fusion: Google Cloud Console
+
+- Provision the Data Fusion instance.
+- Manage its network peering.
+- Setting up IAM permissions for the environment.
+
+### Data Fusion: Data Fusion Studio
+
+- Designing pipeline logic.
+- Use the preview feature to test the logic.
+- Deploying or running the final job.
+
+## Lab: Building Batch Pipelines in Cloud Data Fusion
+
+**Create a new bucket**
+
+```bash
+export BUCKET=$GOOGLE_CLOUD_PROJECT
+gcloud storage buckets create gs://$BUCKET
+```
+
+**Copy the data files**
+
+```bash
+gsutil cp gs://cloud-training/OCBL163/titanic.csv gs://$BUCKET
+```
